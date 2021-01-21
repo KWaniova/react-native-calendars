@@ -22,10 +22,20 @@ export default function getStyle(theme = {}) {
       backgroundColor: appStyle.calendarBackground
     },
     week: {
+      flex: 1,
       marginTop: 7,
       marginBottom: 7,
       flexDirection: 'row',
-      justifyContent: 'space-around'
+      justifyContent: 'center'
+    },
+    weekNumberStyle: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 10
+    },
+    weekNumberTextStyle: {
+      color: 'grey',
+      paddingVertical: 4
     },
     ...(theme[STYLESHEET_ID] || {})
   });

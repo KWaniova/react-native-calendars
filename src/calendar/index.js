@@ -8,18 +8,14 @@ import dateutils from '../dateutils';
 import {xdateToData, parseDate} from '../interface';
 import shouldComponentUpdate from './updater';
 import {extractComponentProps} from '../component-updater';
-import {WEEK_NUMBER} from '../testIDs';
 import styleConstructor from './style';
 import CalendarHeader from './header';
-import BasicDay from './day/basic';
 import Day from './day/index';
-
 //Fallback for react-native-web or when RN version is < 0.44
-const {View, ViewPropTypes} = ReactNative;
+const {View, ViewPropTypes, Text} = ReactNative;
 const viewPropTypes =
   typeof document !== 'undefined' ? PropTypes.shape({style: PropTypes.object}) : ViewPropTypes || View.propTypes;
 const EmptyArray = [];
-
 /**
  * @description: Calendar component
  * @example: https://github.com/wix/react-native-calendars/blob/master/example/src/screens/calendars.js
@@ -27,7 +23,6 @@ const EmptyArray = [];
  */
 class Calendar extends Component {
   static displayName = 'Calendar';
-
   static propTypes = {
     ...CalendarHeader.propTypes,
     ...Day.propTypes,
@@ -70,34 +65,29 @@ class Calendar extends Component {
     /** Style passed to the header */
     headerStyle: PropTypes.oneOfType([PropTypes.object, PropTypes.number, PropTypes.array]),
     /** Allow rendering of a totally custom header */
-    customHeader: PropTypes.any
+    customHeader: PropTypes.any,
+    oddWeekColor: PropTypes.any,
+    evenWeekColor: PropTypes.any,
+    borderRadius: PropTypes.any
   };
-
   static defaultProps = {
     enableSwipeMonths: false
   };
-
   constructor(props) {
     super(props);
-
     this.style = styleConstructor(props.theme);
-
     this.state = {
       currentMonth: props.current ? parseDate(props.current) : XDate()
     };
-
     this.shouldComponentUpdate = shouldComponentUpdate;
   }
-  
   addMonth = count => {
     this.updateMonth(this.state.currentMonth.clone().addMonths(count, true));
   };
-
   updateMonth = (day, doNotTriggerListeners) => {
     if (day.toString('yyyy MM') === this.state.currentMonth.toString('yyyy MM')) {
       return;
     }
-
     this.setState(
       {
         currentMonth: day.clone()
@@ -111,16 +101,13 @@ class Calendar extends Component {
       }
     );
   };
-
   _handleDayInteraction(date, interaction) {
     const {disableMonthChange} = this.props;
     const day = parseDate(date);
     const minDate = parseDate(this.props.minDate);
     const maxDate = parseDate(this.props.maxDate);
-
     if (!(minDate && !dateutils.isGTE(day, minDate)) && !(maxDate && !dateutils.isLTE(day, maxDate))) {
       const shouldUpdateMonth = disableMonthChange === undefined || !disableMonthChange;
-
       if (shouldUpdateMonth) {
         this.updateMonth(day);
       }
@@ -129,37 +116,29 @@ class Calendar extends Component {
       }
     }
   }
-
   pressDay = date => {
     this._handleDayInteraction(date, this.props.onDayPress);
   };
-
   longPressDay = date => {
     this._handleDayInteraction(date, this.props.onDayLongPress);
   };
-
   getDateMarking(day) {
     const {markedDates} = this.props;
-
     if (!markedDates) {
       return false;
     }
-
     const dates = markedDates[day.toString('yyyy-MM-dd')] || EmptyArray;
-
     if (dates.length || dates) {
       return dates;
     } else {
       return false;
     }
   }
-
   getState(day) {
     const {disabledByDefault} = this.props;
     const minDate = parseDate(this.props.minDate);
     const maxDate = parseDate(this.props.maxDate);
     let state = '';
-
     if (disabledByDefault) {
       state = 'disabled';
     } else if (dateutils.isDateNotInTheRange(minDate, maxDate, day)) {
@@ -171,10 +150,8 @@ class Calendar extends Component {
     }
     return state;
   }
-
   onSwipe = gestureName => {
     const {SWIPE_UP, SWIPE_DOWN, SWIPE_LEFT, SWIPE_RIGHT} = swipeDirections;
-
     switch (gestureName) {
       case SWIPE_UP:
       case SWIPE_DOWN:
@@ -187,39 +164,25 @@ class Calendar extends Component {
         break;
     }
   };
-
   onSwipeLeft = () => {
     this.header.onPressRight();
   };
-
   onSwipeRight = () => {
     this.header.onPressLeft();
   };
-
   renderWeekNumber(weekNumber) {
     return (
-      <View style={this.style.dayContainer} key={`week-container-${weekNumber}`}>
-        <BasicDay
-          key={`week-${weekNumber}`}
-          marking={{disableTouchEvent: true}}
-          state="disabled"
-          theme={this.props.theme}
-          testID={`${WEEK_NUMBER}-${weekNumber}`}
-        >
-          {weekNumber}
-        </BasicDay>
+      <View style={this.style.weekNumberStyle} key={`week-container-${weekNumber}`}>
+        <Text style={this.style.weekNumberTextStyle}>{weekNumber}</Text>
       </View>
     );
   }
-
   renderDay(day, id) {
     const {hideExtraDays} = this.props;
     const dayProps = extractComponentProps(Day, this.props);
-
     if (!dateutils.sameMonth(day, this.state.currentMonth) && hideExtraDays) {
       return <View key={id} style={this.style.emptyDayContainer} />;
     }
-
     return (
       <View style={this.style.dayContainer} key={id}>
         <Day
@@ -233,53 +196,55 @@ class Calendar extends Component {
       </View>
     );
   }
-
-  renderWeek(days, id) {
+  renderWeek(days, id, last) {
     const week = [];
-
+    const weekNumber = days[days.length - 1].getWeek();
     days.forEach((day, id2) => {
       week.push(this.renderDay(day, id2));
     }, this);
-
-    if (this.props.showWeekNumbers) {
-      week.unshift(this.renderWeekNumber(days[days.length - 1].getWeek()));
-    }
-
+    console.log('COLOR ', this.props.evenWeekColor);
+    const {borderRadius} = this.props;
     return (
-      <View style={this.style.week} key={id}>
-        {week}
+      <View style={{flexDirection: 'row'}}>
+        {this.props.showWeekNumbers && <View>{this.renderWeekNumber(weekNumber)}</View>}
+        <View
+          style={[
+            this.style.week,
+            {backgroundColor: weekNumber % 2 === 0 ? this.props.evenWeekColor : this.props.oddWeekColor},
+            id === 0 && {borderTopEndRadius: borderRadius, borderTopLeftRadius: borderRadius},
+            last && {borderBottomLeftRadius: borderRadius, borderBottomRightRadius: borderRadius}
+          ]}
+          key={id}
+        >
+          {week}
+        </View>
       </View>
     );
   }
-
   renderMonth() {
     const {currentMonth} = this.state;
     const {firstDay, showSixWeeks, hideExtraDays} = this.props;
     const shouldShowSixWeeks = showSixWeeks && !hideExtraDays;
     const days = dateutils.page(currentMonth, firstDay, shouldShowSixWeeks);
     const weeks = [];
-
     while (days.length) {
-      weeks.push(this.renderWeek(days.splice(0, 7), weeks.length));
+      let last = false;
+      if (days.length <= 7) last = true;
+      weeks.push(this.renderWeek(days.splice(0, 7), weeks.length, last));
     }
-
     return <View style={this.style.monthView}>{weeks}</View>;
   }
-
   renderHeader() {
     const {customHeader, headerStyle, displayLoadingIndicator, markedDates, testID} = this.props;
     const current = parseDate(this.props.current);
     let indicator;
-
     if (current) {
       const lastMonthOfDay = current.clone().addMonths(1, true).setDate(1).addDays(-1).toString('yyyy-MM-dd');
       if (displayLoadingIndicator && !(markedDates && markedDates[lastMonthOfDay])) {
         indicator = true;
       }
     }
-
     const headerProps = extractComponentProps(CalendarHeader, this.props);
-
     const props = {
       ...headerProps,
       testID: testID,
@@ -289,18 +254,14 @@ class Calendar extends Component {
       addMonth: this.addMonth,
       displayLoadingIndicator: indicator
     };
-
     const CustomHeader = customHeader;
     const HeaderComponent = customHeader ? CustomHeader : CalendarHeader;
-
     return <HeaderComponent {...props} />;
   }
-
   render() {
     const {enableSwipeMonths, style} = this.props;
     const GestureComponent = enableSwipeMonths ? GestureRecognizer : View;
     const gestureProps = enableSwipeMonths ? {onSwipe: (direction, state) => this.onSwipe(direction, state)} : {};
-
     return (
       <GestureComponent {...gestureProps}>
         <View
@@ -315,5 +276,4 @@ class Calendar extends Component {
     );
   }
 }
-
 export default Calendar;
