@@ -7,6 +7,7 @@ import {extractComponentProps} from '../../component-updater';
 import dateutils from '../../dateutils';
 import styleConstructor from './style';
 import Reservation from './reservation';
+import {parseDate} from '../../interface';
 
 class ReservationList extends Component {
   static displayName = 'IGNORE';
@@ -15,13 +16,13 @@ class ReservationList extends Component {
     ...Reservation.propTypes,
     /** the list of items that have to be displayed in agenda. If you want to render item as empty date
     the value of date key kas to be an empty array []. If there exists no value for date key it is
-    considered that the date in question is not yet loaded */ 
+    considered that the date in question is not yet loaded */
     reservations: PropTypes.object,
     selectedDay: PropTypes.instanceOf(XDate),
     topDay: PropTypes.instanceOf(XDate),
     /** Show items only for the selected day. Default = false */
     showOnlySelectedDayItems: PropTypes.bool,
-    /** callback that gets called when day changes while scrolling agenda list */ 
+    /** callback that gets called when day changes while scrolling agenda list */
     onDayChange: PropTypes.func,
     /** specify what should be rendered instead of ActivityIndicator */
     renderEmptyData: PropTypes.func,
@@ -81,6 +82,43 @@ class ReservationList extends Component {
       }
     }
   }
+
+  _onRefresh = () => {
+    let scrollPosition = 0;
+    const selectedDay = this.props.selectedDay.clone();
+    const iterator = parseDate(this.props.selectedDay.clone().getTime() - 3600 * 24 * 20 * 1000);
+    let reservations = [];
+    for (let i = 0; i < 10; i++) {
+      const res = this.getReservationsForDay(iterator, this.props);
+      if (res) {
+        reservations = reservations.concat(res);
+      }
+      iterator.addDays(1);
+    }
+    scrollPosition = reservations.length;
+    for (let i = 10; i < 30; i++) {
+      const res = this.getReservationsForDay(iterator, this.props);
+      if (res) {
+        reservations = reservations.concat(res);
+      }
+      iterator.addDays(1);
+    }
+    this.setState(
+      {
+        reservations
+      },
+      () => {
+        setTimeout(() => {
+          let h = 0;
+          for (let i = 0; i < scrollPosition; i++) {
+            h += this.heights[i] || 0;
+          }
+          this.list.scrollToOffset({offset: h, animated: false});
+          this.props.onDayChange(selectedDay, false);
+        }, 100);
+      }
+    );
+  };
 
   updateDataSource(reservations) {
     this.setState({
@@ -242,7 +280,7 @@ class ReservationList extends Component {
         onScroll={this.onScroll}
         refreshControl={this.props.refreshControl}
         refreshing={this.props.refreshing}
-        onRefresh={this.props.onRefresh}
+        onRefresh={this._onRefresh}
         onScrollBeginDrag={this.props.onScrollBeginDrag}
         onScrollEndDrag={this.props.onScrollEndDrag}
         onMomentumScrollBegin={this.props.onMomentumScrollBegin}
