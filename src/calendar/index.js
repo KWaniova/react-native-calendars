@@ -202,7 +202,6 @@ class Calendar extends Component {
     days.forEach((day, id2) => {
       week.push(this.renderDay(day, id2));
     }, this);
-    console.log('COLOR ', this.props.evenWeekColor);
     const {borderRadius} = this.props;
     return (
       <View style={{flexDirection: 'row'}}>
