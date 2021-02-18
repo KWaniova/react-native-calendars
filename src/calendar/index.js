@@ -204,7 +204,7 @@ class Calendar extends Component {
     }, this);
     const {borderRadius} = this.props;
     return (
-      <View style={{flexDirection: 'row'}}>
+      <View id={id} style={{flexDirection: 'row'}}>
         {this.props.showWeekNumbers && <View>{this.renderWeekNumber(weekNumber)}</View>}
         <View
           style={[
